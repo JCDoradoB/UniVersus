@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UniVersus | Torneos universitarios</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <p class="logo"><a href="index.html">UniVersus</a></p>
+        <nav class="nav-links" aria-label="Cuenta">
+          <a href="login.html">Iniciar sesión</a>
+          <a href="register.html">Registrarse</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>Torneos universitarios</h1>
+        <p>Consulta competencias abiertas, en curso y finalizadas de tu comunidad.</p>
+      </section>
+
+      <section aria-labelledby="titulo-torneos">
+        <h2 id="titulo-torneos" class="visually-hidden" hidden>Lista de torneos</h2>
+        <p id="mensaje-vacio" class="mensaje" hidden>Cargando torneos...</p>
+        <div id="lista-torneos" class="torneos-grid"></div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
