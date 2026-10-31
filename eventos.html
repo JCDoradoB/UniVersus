@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Eventos deportivos | UniVersus</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <p class="logo"><a href="index.html">UniVersus</a></p>
+        <nav class="nav-links" aria-label="Cuenta">
+          <a href="index.html">Torneos</a>
+          <a href="eventos.html">Crear evento</a>
+          <button id="cerrar-sesion" class="btn-enlace" type="button">Cerrar sesión</button>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>Gestión de eventos deportivos</h1>
+        <p id="saludo">Verificando tu cuenta...</p>
+      </section>
+
+      <p id="mensaje-eventos" class="mensaje" role="status">Cargando eventos...</p>
+
+      <section id="seccion-crear" class="auth-card formulario-evento" hidden>
+        <h2>Crear un evento</h2>
+        <p class="subtitulo">Organiza una competencia individual o por equipos.</p>
+        <p id="mensaje-error" class="mensaje-error" role="alert"></p>
+        <p id="mensaje-ok" class="mensaje-ok" role="status"></p>
+
+        <form id="form-evento" novalidate>
+          <div class="form-grupo">
+            <label for="nombre">Nombre del evento</label>
+            <input id="nombre" name="nombre" type="text" maxlength="120" required />
+          </div>
+          <div class="form-grupo">
+            <label for="deporte">Deporte</label>
+            <input id="deporte" name="deporte" type="text" maxlength="80" required />
+          </div>
+          <div class="form-grupo">
+            <label for="modalidad">Modalidad</label>
+            <select id="modalidad" name="modalidad" required>
+              <option value="individual">Individual</option>
+              <option value="equipos">Por equipos</option>
+            </select>
+          </div>
+          <div class="form-grupo">
+            <label for="fecha_inicio">Fecha de inicio</label>
+            <input id="fecha_inicio" name="fecha_inicio" type="date" required />
+          </div>
+          <div class="form-grupo">
+            <label for="cupos">Cupos (participantes o equipos)</label>
+            <input id="cupos" name="cupos" type="number" min="1" step="1" required />
+          </div>
+          <button class="btn" type="submit">Publicar evento</button>
+        </form>
+      </section>
+
+      <section aria-labelledby="titulo-eventos">
+        <h2 id="titulo-eventos">Eventos publicados</h2>
+        <div id="lista-torneos" class="torneos-grid"></div>
+      </section>
+    </main>
+
+    <script type="module" src="js/eventos.js"></script>
+  </body>
+</html>

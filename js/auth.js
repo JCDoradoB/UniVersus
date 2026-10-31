@@ -1,3 +1,5 @@
+import { supabaseClient } from "./supabase.js";
+
 const MENSAJE_CORREO_INVALIDO = "El correo electrónico no es válido.";
 const MENSAJE_PASSWORD_CORTA = "La contraseña debe tener al menos 8 caracteres.";
 
@@ -36,6 +38,7 @@ const formularioRegistro = document.getElementById("form-registro");
 
 if (formularioLogin) {
   const mensajeError = document.getElementById("mensaje-error");
+  const boton = formularioLogin.querySelector('button[type="submit"]');
 
   formularioLogin.addEventListener("submit", async (evento) => {
     evento.preventDefault();
@@ -50,22 +53,54 @@ if (formularioLogin) {
       return;
     }
 
-    const boton = formularioLogin.querySelector('button[type="submit"]');
     boton.disabled = true;
 
-    const { error } = await supabaseClient.auth.signInWithPassword({
-      email: correo,
-      password,
-    });
+    try {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: correo,
+        password,
+      });
 
-    boton.disabled = false;
+      if (error) {
+        const mensaje = error.message.toLowerCase().includes("email not confirmed")
+          ? "Debes confirmar tu correo antes de iniciar sesión."
+          : error.message.toLowerCase().includes("invalid login credentials")
+            ? "El correo o la contraseña no son correctos."
+            : error.message;
+        mostrarMensaje(mensajeError, mensaje);
+        return;
+      }
 
-    if (error) {
-      mostrarMensaje(mensajeError, error.message);
-      return;
+      if (!data.user) {
+        mostrarMensaje(mensajeError, "Supabase no devolvió el usuario al iniciar sesión.");
+        return;
+      }
+
+      const { data: perfil, error: errorPerfil } = await supabaseClient
+        .from("perfiles")
+        .select("rol")
+        .eq("id", data.user.id)
+        .single();
+
+      if (errorPerfil) {
+        mostrarMensaje(
+          mensajeError,
+          `Iniciaste sesión, pero no se pudo cargar tu perfil: ${errorPerfil.message}`
+        );
+        return;
+      }
+
+      window.location.href = ["organizador", "administrador"].includes(perfil.rol)
+        ? "eventos.html"
+        : "index.html";
+    } catch (error) {
+      mostrarMensaje(
+        mensajeError,
+        `No se pudo completar el inicio de sesión. Verifica tu conexión e inténtalo de nuevo. ${error.message}`
+      );
+    } finally {
+      boton.disabled = false;
     }
-
-    window.location.href = "index.html";
   });
 }
 
@@ -91,35 +126,47 @@ if (formularioRegistro) {
     const boton = formularioRegistro.querySelector('button[type="submit"]');
     boton.disabled = true;
 
-    const { data, error } = await supabaseClient.auth.signUp({
-      email: correo,
-      password,
-      options: {
-        data: { nombre, programa },
-      },
-    });
-
-    if (error) {
-      boton.disabled = false;
-      mostrarMensaje(mensajeError, error.message);
-      return;
-    }
-
-    if (data.user) {
-      await supabaseClient.from("perfiles").insert({
-        id: data.user.id,
-        nombre,
-        programa,
-        rol: "participante",
+    try {
+      const { data, error } = await supabaseClient.auth.signUp({
+        email: correo,
+        password,
+        options: {
+          data: { nombre, programa },
+        },
       });
-    }
 
-    boton.disabled = false;
-    formularioRegistro.reset();
-    mostrarMensaje(
-      mensajeOk,
-      "Cuenta creada. Revisa tu correo si debes confirmar el registro.",
-      "ok"
-    );
+      if (error) {
+        mostrarMensaje(mensajeError, error.message);
+        return;
+      }
+
+      if (data.user) {
+        const { error: errorPerfil } = await supabaseClient.from("perfiles").insert({
+          id: data.user.id,
+          nombre,
+          programa,
+          rol: "participante",
+        });
+
+        if (errorPerfil) {
+          mostrarMensaje(mensajeError, `La cuenta se creó, pero no el perfil: ${errorPerfil.message}`);
+          return;
+        }
+      }
+
+      formularioRegistro.reset();
+      mostrarMensaje(
+        mensajeOk,
+        "Cuenta creada. Revisa tu correo si debes confirmar el registro.",
+        "ok"
+      );
+    } catch (error) {
+      mostrarMensaje(
+        mensajeError,
+        `No se pudo completar el registro. Verifica tu conexión e inténtalo de nuevo. ${error.message}`
+      );
+    } finally {
+      boton.disabled = false;
+    }
   });
 }

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seed de usuarios | UniVersus</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <!--
+      Archivo temporal de carga de usuarios de prueba.
+      Una vez ejecutado en el navegador, este archivo seed.html puede ser borrado.
+    -->
+    <header class="site-header">
+      <div class="header-inner">
+        <p class="logo"><a href="index.html">UniVersus</a></p>
+      </div>
+    </header>
+
+    <main>
+      <section class="auth-card">
+        <h1>Usuarios de prueba</h1>
+        <p id="estado" class="subtitulo">Creando usuarios...</p>
+        <ul id="resultado" class="tarjeta-meta"></ul>
+      </section>
+    </main>
+
+    <script type="module">
+      import { supabaseClient } from "./js/supabase.js";
+
+      const usuarios = [
+        {
+          email: "laura@universus.com",
+          password: "Password123*",
+          metadata: {
+            nombre: "Laura",
+            programa: "Bienestar Universitario",
+            rol: "organizador",
+          },
+        },
+        {
+          email: "admin@universus.com",
+          password: "Password123*",
+          metadata: {
+            nombre: "Admin",
+            programa: "Sistemas",
+            rol: "administrador",
+          },
+        },
+      ];
+
+      const estado = document.getElementById("estado");
+      const resultado = document.getElementById("resultado");
+
+      const agregarLinea = (correo, mensaje, ok) => {
+        const item = document.createElement("li");
+        item.textContent = `${correo}: ${ok ? "éxito" : "error"} — ${mensaje}`;
+        item.style.color = ok ? "#2e7d32" : "#c8102e";
+        resultado.appendChild(item);
+      };
+
+      const crearUsuario = async ({ email, password, metadata }) => {
+        const { data, error } = await supabaseClient.auth.signUp({
+          email,
+          password,
+          options: { data: metadata },
+        });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        const userId = data.user?.id;
+        if (!userId) {
+          throw new Error("Supabase no devolvió el id del usuario.");
+        }
+
+        const { error: errorPerfil } = await supabaseClient.from("perfiles").insert({
+          id: userId,
+          nombre: metadata.nombre,
+          programa: metadata.programa,
+          rol: metadata.rol,
+        });
+
+        if (errorPerfil) {
+          throw new Error(errorPerfil.message);
+        }
+
+        await supabaseClient.auth.signOut();
+        return "Usuario y perfil creados.";
+      };
+
+      const ejecutarSeed = async () => {
+        for (const usuario of usuarios) {
+          try {
+            const mensaje = await crearUsuario(usuario);
+            agregarLinea(usuario.email, mensaje, true);
+          } catch (error) {
+            agregarLinea(usuario.email, error.message, false);
+            await supabaseClient.auth.signOut();
+          }
+        }
+
+        estado.textContent = "Proceso de creación finalizado.";
+      };
+
+      ejecutarSeed();
+    </script>
+  </body>
+</html>

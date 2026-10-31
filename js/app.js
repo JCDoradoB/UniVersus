@@ -1,5 +1,8 @@
+import { supabaseClient } from "./supabase.js";
+
 const listaTorneos = document.getElementById("lista-torneos");
 const mensajeVacio = document.getElementById("mensaje-vacio");
+const navCuenta = document.getElementById("nav-cuenta");
 
 const claseChip = (estado) => {
   const valor = (estado || "").toLowerCase().trim();
@@ -35,6 +38,7 @@ const crearTarjeta = (torneo) => {
 
   const campos = [
     ["Deporte", torneo.deporte || "No especificado"],
+    ["Modalidad", torneo.modalidad === "equipos" ? "Por equipos" : "Individual"],
     ["Fecha", formatearFecha(torneo.fecha_inicio)],
     ["Cupos", torneo.cupos ?? "Sin límite"],
   ];
@@ -87,4 +91,44 @@ const cargarTorneos = async () => {
   listaTorneos.replaceChildren(...data.map(crearTarjeta));
 };
 
+const actualizarNavegacion = async () => {
+  if (!navCuenta) return;
+
+  const { data, error } = await supabaseClient.auth.getSession();
+  if (error || !data.session) return;
+
+  const usuario = data.session.user;
+  const { data: perfil } = await supabaseClient
+    .from("perfiles")
+    .select("nombre, rol")
+    .eq("id", usuario.id)
+    .maybeSingle();
+
+  const enlaceEventos = document.createElement("a");
+  enlaceEventos.href = "eventos.html";
+  enlaceEventos.textContent = ["organizador", "administrador"].includes(perfil?.rol)
+    ? "Crear evento"
+    : "Eventos";
+
+  const nombre = document.createElement("span");
+  nombre.className = "nav-saludo";
+  nombre.textContent = perfil?.nombre || usuario.email;
+
+  const cerrarSesion = document.createElement("button");
+  cerrarSesion.className = "btn-enlace";
+  cerrarSesion.type = "button";
+  cerrarSesion.textContent = "Cerrar sesión";
+  cerrarSesion.addEventListener("click", async () => {
+    const { error: errorSalida } = await supabaseClient.auth.signOut();
+    if (errorSalida) {
+      mostrarError(`No se pudo cerrar sesión: ${errorSalida.message}`);
+      return;
+    }
+    window.location.reload();
+  });
+
+  navCuenta.replaceChildren(enlaceEventos, nombre, cerrarSesion);
+};
+
 cargarTorneos();
+actualizarNavegacion();
