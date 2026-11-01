@@ -1,0 +1,7 @@
+Usuario Organizador (Laura)
+Correo: laura@universus.com
+Contraseña: Password123*
+
+Usuario Administrador (Admin)
+Correo: admin@universus.com
+Contraseña: Password123*
