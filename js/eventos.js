@@ -2,11 +2,16 @@ import { supabaseClient } from "./supabase.js";
 
 const seccionCrear = document.getElementById("seccion-crear");
 const formulario = document.getElementById("form-evento");
+const dialogoEvento = document.getElementById("dialogo-evento");
 const mensajeEventos = document.getElementById("mensaje-eventos");
 const mensajeError = document.getElementById("mensaje-error");
 const mensajeOk = document.getElementById("mensaje-ok");
 const listaTorneos = document.getElementById("lista-torneos");
 const saludo = document.getElementById("saludo");
+const tituloFormulario = document.getElementById("titulo-formulario");
+const botonGuardar = document.getElementById("guardar-evento");
+let puedeGestionarEventos = false;
+let eventoEnEdicion = null;
 
 const mostrarMensaje = (elemento, texto) => {
   elemento.textContent = texto;
@@ -19,6 +24,31 @@ const limpiarMensaje = (elemento) => {
   elemento.hidden = true;
   elemento.classList.remove("visible");
 };
+
+document.getElementById("abrir-formulario").addEventListener("click", () => {
+  eventoEnEdicion = null;
+  formulario.reset();
+  tituloFormulario.textContent = "Crear un evento";
+  botonGuardar.textContent = "Publicar evento";
+  dialogoEvento.showModal();
+  document.getElementById("nombre").focus();
+});
+
+const cerrarFormulario = () => {
+  dialogoEvento.close();
+  limpiarMensaje(mensajeError);
+  formulario.reset();
+  eventoEnEdicion = null;
+  tituloFormulario.textContent = "Crear un evento";
+  botonGuardar.textContent = "Publicar evento";
+};
+
+document.getElementById("cerrar-formulario").addEventListener("click", cerrarFormulario);
+document.getElementById("cancelar-formulario").addEventListener("click", cerrarFormulario);
+
+dialogoEvento.addEventListener("click", (evento) => {
+  if (evento.target === dialogoEvento) cerrarFormulario();
+});
 
 const formatearFecha = (fecha) => {
   if (!fecha) return "Por definir";
@@ -55,6 +85,34 @@ const crearTarjeta = (torneo) => {
   estado.textContent = torneo.estado || "abierto";
 
   articulo.append(titulo, detalles, meta, estado);
+
+  if (puedeGestionarEventos) {
+    const acciones = document.createElement("div");
+    acciones.className = "acciones-torneo";
+
+    const botonEditar = document.createElement("button");
+    botonEditar.className = "btn btn-editar";
+    botonEditar.type = "button";
+    botonEditar.textContent = "Editar";
+    botonEditar.setAttribute("aria-label", `Editar ${torneo.nombre || "evento"}`);
+    botonEditar.addEventListener("click", () => {
+      eventoEnEdicion = torneo;
+      tituloFormulario.textContent = "Editar evento";
+      botonGuardar.textContent = "Guardar cambios";
+      formulario.elements.nombre.value = torneo.nombre || "";
+      formulario.elements.deporte.value = torneo.deporte || "";
+      formulario.elements.modalidad.value = torneo.modalidad || "individual";
+      formulario.elements.fecha_inicio.value = torneo.fecha_inicio || "";
+      formulario.elements.cupos.value = torneo.cupos ?? "";
+      limpiarMensaje(mensajeError);
+      dialogoEvento.showModal();
+      document.getElementById("nombre").focus();
+    });
+
+    acciones.append(botonEditar);
+    articulo.append(acciones);
+  }
+
   return articulo;
 };
 
@@ -110,7 +168,8 @@ const iniciar = async () => {
   }
 
   saludo.textContent = `Hola, ${perfil.nombre || usuario.email}.`;
-  if (["organizador", "administrador"].includes(perfil.rol)) {
+  puedeGestionarEventos = ["organizador", "administrador"].includes(perfil.rol);
+  if (puedeGestionarEventos) {
     seccionCrear.hidden = false;
   } else {
     mostrarMensaje(mensajeEventos, "Tu cuenta no tiene permisos de organizador para crear eventos.");
@@ -137,25 +196,63 @@ formulario.addEventListener("submit", async (evento) => {
   boton.disabled = true;
 
   try {
-    const { error } = await supabaseClient.from("torneos").insert({
+    const { data: sesionData, error: errorSesion } = await supabaseClient.auth.getSession();
+    if (errorSesion || !sesionData.session?.user) {
+      mostrarMensaje(
+        mensajeError,
+        "Tu sesión de Supabase no está activa. Cierra sesión, vuelve a ingresar y prueba otra vez."
+      );
+      return;
+    }
+
+    const datosEvento = {
       nombre: String(datos.get("nombre")).trim(),
       deporte: String(datos.get("deporte")).trim(),
       modalidad: String(datos.get("modalidad")),
       fecha_inicio: String(datos.get("fecha_inicio")),
       cupos,
-      estado: "abierto",
-    });
+    };
+
+    const resultado = eventoEnEdicion
+      ? await supabaseClient
+          .from("torneos")
+          .update(datosEvento)
+          .eq("id", eventoEnEdicion.id)
+          .select("id")
+      : await supabaseClient
+          .from("torneos")
+          .insert({ ...datosEvento, estado: "abierto" });
+    const error = resultado.error;
 
     if (error) {
+      const mensaje = /permission denied for table torneos/i.test(error.message)
+        ? `Falta el permiso SQL ${eventoEnEdicion ? "UPDATE" : "INSERT"} en public.torneos. Ejecuta la migración correspondiente en el proyecto conectado ${error.code ? `(código ${error.code})` : ""}.`
+        : /row-level security|new row violates/i.test(error.message)
+          ? `La política RLS rechazó la operación. Verifica que el perfil asociado a esta sesión tenga rol administrador u organizador y que aplicaste la migración para editar eventos. ${error.message}`
+          : `No se pudo ${eventoEnEdicion ? "guardar los cambios" : "publicar el evento"}. ${error.message}`;
+
+      mostrarMensaje(mensajeError, mensaje);
+      return;
+    }
+
+    if (eventoEnEdicion && (!resultado.data || resultado.data.length === 0)) {
       mostrarMensaje(
         mensajeError,
-        `No se pudo publicar el evento. Comprueba que la migración y las políticas RLS estén aplicadas. ${error.message}`
+        "No se actualizó ningún evento. Verifica que la política RLS de actualización esté aplicada y permita editar este registro."
       );
       return;
     }
 
+    const estabaEditando = Boolean(eventoEnEdicion);
     formulario.reset();
-    mostrarMensaje(mensajeOk, "Evento publicado correctamente.");
+    dialogoEvento.close();
+    eventoEnEdicion = null;
+    tituloFormulario.textContent = "Crear un evento";
+    botonGuardar.textContent = "Publicar evento";
+    mostrarMensaje(
+      mensajeOk,
+      estabaEditando ? "Cambios guardados correctamente." : "Evento publicado correctamente."
+    );
     await cargarEventos();
   } catch (error) {
     mostrarMensaje(mensajeError, `No se pudo publicar el evento: ${error.message}`);
