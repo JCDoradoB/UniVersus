@@ -31,8 +31,46 @@
             <input id="nombre" name="nombre" type="text" autocomplete="name" required />
           </div>
           <div class="form-grupo">
-            <label for="programa">Programa</label>
-            <input id="programa" name="programa" type="text" required />
+            <label for="programa">Programa académico y jornada</label>
+            <select
+              id="programa"
+              name="programa"
+              autocomplete="organization-title"
+              aria-describedby="error-programa"
+              aria-invalid="false"
+              required
+            >
+              <option value="" disabled selected>Selecciona tu programa y jornada</option>
+              <optgroup label="Tecnologías">
+                <option value="2724-Diurno">2724: Tecnología en Desarrollo de Software (Diurno)</option>
+                <option value="2724-Nocturno">2724: Tecnología en Desarrollo de Software (Nocturno)</option>
+                <option value="2711-Diurno">2711: Tecnología en Sistemas de Información (Diurno)</option>
+                <option value="2711-Nocturno">2711: Tecnología en Sistemas de Información (Nocturno)</option>
+                <option value="2838-Diurno">2838: Tecnología en Gestión del Talento Humano (Diurno)</option>
+                <option value="2838-Nocturno">2838: Tecnología en Gestión del Talento Humano (Nocturno)</option>
+                <option value="2837-Diurno">2837: Tecnología en Gestión de la Calidad (Diurno)</option>
+                <option value="2837-Nocturno">2837: Tecnología en Gestión de la Calidad (Nocturno)</option>
+                <option value="2839-Diurno">2839: Tecnología en Gestión Logística (Diurno)</option>
+                <option value="2839-Nocturno">2839: Tecnología en Gestión Logística (Nocturno)</option>
+              </optgroup>
+              <optgroup label="Carreras Profesionales y Licenciaturas">
+                <option value="3845-Diurno">3845: Administración de Empresas (Diurno)</option>
+                <option value="3845-Nocturno">3845: Administración de Empresas (Nocturno)</option>
+                <option value="3841-Diurno">3841: Contaduría Pública (Diurno)</option>
+                <option value="3841-Nocturno">3841: Contaduría Pública (Nocturno)</option>
+                <option value="3249-Diurno">3249: Trabajo Social (Diurno)</option>
+                <option value="3249-Nocturno">3249: Trabajo Social (Nocturno)</option>
+                <option value="3489-Diurno">3489: Estudios Políticos y Resolución de Conflictos (Diurno)</option>
+                <option value="3489-Nocturno">3489: Estudios Políticos y Resolución de Conflictos (Nocturno)</option>
+                <option value="3150-Diurno">3150: Profesional en Agroindustria (Diurno)</option>
+                <option value="3150-Nocturno">3150: Profesional en Agroindustria (Nocturno)</option>
+                <option value="3469-Diurno">3469: Licenciatura en Educación Básica con Énfasis en Matemáticas (Diurno)</option>
+                <option value="3469-Nocturno">3469: Licenciatura en Educación Básica con Énfasis en Matemáticas (Nocturno)</option>
+              </optgroup>
+            </select>
+            <p id="error-programa" class="mensaje-error" role="alert" aria-live="polite" hidden>
+              Elige tu programa y jornada para continuar.
+            </p>
           </div>
           <div class="form-grupo">
             <label for="email">Correo electrónico</label>

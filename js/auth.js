@@ -107,15 +107,35 @@ if (formularioLogin) {
 if (formularioRegistro) {
   const mensajeError = document.getElementById("mensaje-error");
   const mensajeOk = document.getElementById("mensaje-ok");
+  const campoPrograma = formularioRegistro.elements.programa;
+  const errorPrograma = document.getElementById("error-programa");
+
+  const limpiarErrorPrograma = () => {
+    errorPrograma.hidden = true;
+    errorPrograma.classList.remove("visible");
+    campoPrograma.setAttribute("aria-invalid", "false");
+  };
+
+  campoPrograma.addEventListener("change", limpiarErrorPrograma);
 
   formularioRegistro.addEventListener("submit", async (evento) => {
     evento.preventDefault();
     limpiarMensajes(mensajeError, mensajeOk);
+    limpiarErrorPrograma();
 
     const nombre = formularioRegistro.nombre.value.trim();
-    const programa = formularioRegistro.programa.value.trim();
+    const programa = campoPrograma.value;
     const correo = formularioRegistro.email.value.trim();
     const password = formularioRegistro.password.value;
+
+    if (!programa) {
+      errorPrograma.hidden = false;
+      errorPrograma.classList.add("visible");
+      campoPrograma.setAttribute("aria-invalid", "true");
+      campoPrograma.focus();
+      return;
+    }
+
     const errorValidacion = validarCredenciales(correo, password);
 
     if (errorValidacion) {

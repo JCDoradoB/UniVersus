@@ -26,10 +26,63 @@
       <section aria-labelledby="titulo-torneos">
         <h2 id="titulo-torneos" class="visually-hidden" hidden>Lista de torneos</h2>
         <p id="mensaje-vacio" class="mensaje" hidden>Cargando torneos...</p>
+        <p id="mensaje-inscripcion-ok" class="mensaje-ok" role="status" hidden></p>
         <div id="lista-torneos" class="torneos-grid"></div>
       </section>
+
+      <dialog id="dialogo-inscripcion" class="modal-evento" aria-labelledby="titulo-inscripcion">
+        <div class="modal-encabezado">
+          <div>
+            <h2 id="titulo-inscripcion">Inscribirme al torneo</h2>
+            <p id="nombre-torneo-inscripcion" class="subtitulo"></p>
+          </div>
+          <button id="cerrar-inscripcion" class="btn-cerrar" type="button" aria-label="Cerrar">
+            &times;
+          </button>
+        </div>
+        <p id="mensaje-inscripcion" class="mensaje-error" role="alert" hidden></p>
+        <form id="form-inscripcion" novalidate>
+          <div id="grupo-equipo" class="form-grupo" hidden>
+            <label for="nombre-equipo">Nombre del equipo</label>
+            <input id="nombre-equipo" name="nombre_equipo" type="text" maxlength="100" />
+          </div>
+          <div class="form-grupo">
+            <label for="nombre-capitan">Nombre completo del capitán</label>
+            <input id="nombre-capitan" name="nombre_capitan" type="text" maxlength="150" required />
+          </div>
+          <div class="form-grupo">
+            <label for="codigo-estudiante">Número de estudiante (código universitario)</label>
+            <input id="codigo-estudiante" name="codigo_estudiante" type="text" maxlength="40" required />
+          </div>
+          <div class="form-grupo">
+            <label for="correo-institucional">Correo electrónico institucional</label>
+            <input
+              id="correo-institucional"
+              name="correo_institucional"
+              type="email"
+              maxlength="254"
+              autocomplete="email"
+              required
+            />
+          </div>
+          <div class="modal-acciones">
+            <button id="cancelar-inscripcion" class="btn btn-secundario" type="button">
+              Cancelar
+            </button>
+            <button id="enviar-inscripcion" class="btn" type="submit">Enviar inscripción</button>
+          </div>
+        </form>
+      </dialog>
     </main>
 
-    <script type="module" src="js/app.js"></script>
+    <script src="js/demo.js"></script>
+    <script>
+      if (window.location.protocol !== "file:") {
+        const app = document.createElement("script");
+        app.type = "module";
+        app.src = "js/app.js";
+        document.body.append(app);
+      }
+    </script>
   </body>
 </html>

@@ -60,8 +60,20 @@
                   </select>
                 </div>
                 <div class="form-grupo">
-                  <label for="fecha_inicio">Fecha de inicio</label>
+                  <label for="inscripciones_inicio">Inicio de inscripciones</label>
+                  <input id="inscripciones_inicio" name="inscripciones_inicio" type="date" required />
+                </div>
+                <div class="form-grupo">
+                  <label for="inscripciones_fin">Fin de inscripciones</label>
+                  <input id="inscripciones_fin" name="inscripciones_fin" type="date" required />
+                </div>
+                <div class="form-grupo">
+                  <label for="fecha_inicio">Inicio del evento</label>
                   <input id="fecha_inicio" name="fecha_inicio" type="date" required />
+                </div>
+                <div class="form-grupo">
+                  <label for="fecha_fin">Fin del evento</label>
+                  <input id="fecha_fin" name="fecha_fin" type="date" required />
                 </div>
                 <div class="form-grupo">
                   <label for="cupos">Cupos (participantes o equipos)</label>
@@ -80,6 +92,29 @@
         <p id="mensaje-ok" class="mensaje-ok" role="status" hidden></p>
         <p id="mensaje-eventos" class="mensaje" role="status">Cargando eventos...</p>
         <div id="lista-torneos" class="torneos-grid"></div>
+      </section>
+
+      <section id="seccion-inscripciones" class="seccion-inscripciones" aria-labelledby="titulo-inscripciones" hidden>
+        <div class="eventos-encabezado">
+          <h2 id="titulo-inscripciones">Personas inscritas</h2>
+        </div>
+        <p id="mensaje-inscripciones" class="mensaje" role="status">Cargando inscripciones...</p>
+        <div class="tabla-inscripciones-contenedor">
+          <table class="tabla-inscripciones">
+            <caption class="visually-hidden">Inscripciones a los torneos</caption>
+            <thead>
+              <tr>
+                <th scope="col">Evento</th>
+                <th scope="col">Equipo</th>
+                <th scope="col">Capitán</th>
+                <th scope="col">Código estudiante</th>
+                <th scope="col">Correo institucional</th>
+                <th scope="col">Fecha de inscripción</th>
+              </tr>
+            </thead>
+            <tbody id="filas-inscripciones"></tbody>
+          </table>
+        </div>
       </section>
     </main>
 

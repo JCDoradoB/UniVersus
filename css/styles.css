@@ -147,6 +147,30 @@ main {
   margin: 0 0 0.4rem;
 }
 
+.torneo-fechas {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.fecha-bloque {
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radio);
+  background: #ffffff;
+}
+
+.fecha-bloque h3 {
+  margin: 0 0 0.15rem;
+  color: var(--color-texto);
+  font-size: 0.9rem;
+}
+
+.fecha-bloque p {
+  margin: 0;
+  color: var(--color-texto-secundario);
+  font-size: 0.92rem;
+}
+
 .chip {
   display: inline-block;
   margin-top: 0.35rem;
@@ -264,8 +288,63 @@ select:focus {
   outline-offset: 1px;
 }
 
+select[aria-invalid="true"] {
+  border-color: var(--color-principal);
+}
+
+.form-grupo > .mensaje-error {
+  margin-top: 0.5rem;
+}
+
 .seccion-eventos {
   margin-top: 1.5rem;
+}
+
+.seccion-inscripciones {
+  margin-top: 2rem;
+}
+
+.tabla-inscripciones-contenedor {
+  overflow-x: auto;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-tarjeta);
+  box-shadow: var(--sombra);
+}
+
+.tabla-inscripciones {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tabla-inscripciones th,
+.tabla-inscripciones td {
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid #d5d5d5;
+  vertical-align: top;
+}
+
+.tabla-inscripciones th {
+  background: #ededed;
+  color: var(--color-texto);
+  white-space: nowrap;
+}
+
+.tabla-inscripciones tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .eventos-encabezado {
@@ -285,6 +364,17 @@ select:focus {
   width: auto;
   margin: 0;
   white-space: nowrap;
+}
+
+.btn-inscribirme {
+  margin-top: 1rem;
+}
+
+.btn-inscrito,
+.btn-inscrito:disabled {
+  background: #e8f5e9;
+  color: #2e7d32;
+  opacity: 1;
 }
 
 .modal-evento {
@@ -349,6 +439,10 @@ select:focus {
 .modal-acciones .btn {
   width: auto;
   margin: 0;
+}
+
+#dialogo-inscripcion .form-grupo[hidden] {
+  display: none;
 }
 
 .btn-secundario {
