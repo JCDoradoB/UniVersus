@@ -72,6 +72,18 @@ a:focus-visible {
 .logo a {
   color: #ffffff;
   text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.logo a:hover,
+.logo a:focus-visible {
+  opacity: 0.82;
+}
+
+.logo a:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 4px;
+  border-radius: 2px;
 }
 
 .nav-links {
@@ -110,6 +122,48 @@ main {
   color: var(--color-texto-secundario);
 }
 
+.contador-usuarios {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.9rem 0 0;
+  padding: 0.7rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radio);
+  background: var(--color-principal);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--sombra);
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.contador-usuarios[hidden] {
+  display: none;
+}
+
+.contador-usuarios svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 auto;
+}
+
+.contador-usuarios:hover,
+.contador-usuarios:focus-visible {
+  background: #a50d25;
+  transform: translateY(-1px);
+}
+
+.contador-usuarios:focus-visible {
+  outline: 3px solid #333333;
+  outline-offset: 3px;
+}
+
+#dialogo-usuarios .tabla-inscripciones-contenedor[hidden] {
+  display: none;
+}
+
 .torneos-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -117,11 +171,40 @@ main {
 }
 
 .tarjeta-torneo {
+  overflow: hidden;
   background: var(--color-tarjeta);
   border: 1px solid var(--color-borde);
   border-radius: var(--radio);
   padding: 1rem 1.1rem;
   box-shadow: var(--sombra);
+}
+
+.imagen-torneo {
+  position: relative;
+  display: grid;
+  aspect-ratio: 16 / 9;
+  margin: -1rem -1.1rem 0.9rem;
+  overflow: hidden;
+  background: #e8eaf6;
+}
+
+.imagen-torneo-respaldo {
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: #334155;
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.imagen-torneo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .tarjeta-torneo h2,
@@ -186,8 +269,16 @@ main {
   background: var(--color-abierto);
 }
 
-.chip-en-curso {
+.chip-proximamente {
   background: var(--color-en-curso);
+}
+
+.chip-cerrado {
+  background: var(--color-finalizado);
+}
+
+.chip-cancelado {
+  background: var(--color-principal);
 }
 
 .chip-finalizado {
@@ -251,6 +342,82 @@ main {
   font-size: 0.95rem;
 }
 
+.perfil-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.perfil-card {
+  min-width: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-tarjeta);
+  box-shadow: var(--sombra);
+}
+
+.perfil-card h2 {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+}
+
+.perfil-datos {
+  display: grid;
+  gap: 0.9rem;
+  margin: 0;
+}
+
+.perfil-datos > div {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #d5d5d5;
+}
+
+.perfil-datos > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.perfil-datos dt {
+  margin-bottom: 0.15rem;
+  color: var(--color-texto-secundario);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.perfil-datos dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.estado-cuenta {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.estado-cuenta-activa {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.estado-cuenta-pendiente {
+  background: #fff3e0;
+  color: #8a4b08;
+}
+
+.perfil-card .subtitulo {
+  margin: -0.5rem 0 1rem;
+  color: var(--color-texto-secundario);
+}
+
+.perfil-card .mensaje[hidden],
+.perfil-card .mensaje-error[hidden],
+.perfil-card .mensaje-ok[hidden] {
+  display: none;
+}
+
 .form-grupo {
   margin-bottom: 1rem;
 }
@@ -278,6 +445,64 @@ select {
   background: var(--color-fondo);
 }
 
+input::placeholder {
+  color: #8a8a8a;
+  opacity: 1;
+}
+
+.medidor-password {
+  margin-top: 0.6rem;
+}
+
+.medidor-password-barra {
+  height: 0.45rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e2e2;
+}
+
+.medidor-password-barra span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: transparent;
+  transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+.medidor-password-barra.nivel-debil span {
+  width: 33.333%;
+  background: #c62828;
+}
+
+.medidor-password-barra.nivel-medio span {
+  width: 66.667%;
+  background: #f9a825;
+}
+
+.medidor-password-barra.nivel-fuerte span {
+  width: 100%;
+  background: #2e7d32;
+}
+
+.medidor-password-texto {
+  margin: 0.35rem 0 0;
+  color: var(--color-texto-secundario);
+  font-size: 0.85rem;
+}
+
+.medidor-password-texto.nivel-debil {
+  color: #b71c1c;
+}
+
+.medidor-password-texto.nivel-medio {
+  color: #805600;
+}
+
+.medidor-password-texto.nivel-fuerte {
+  color: #2e7d32;
+}
+
 input:focus {
   outline: 2px solid var(--color-principal);
   outline-offset: 1px;
@@ -302,6 +527,11 @@ select[aria-invalid="true"] {
 
 .seccion-inscripciones {
   margin-top: 2rem;
+}
+
+.mensaje[hidden],
+.tabla-inscripciones-contenedor[hidden] {
+  display: none;
 }
 
 .tabla-inscripciones-contenedor {
@@ -463,15 +693,40 @@ select[aria-invalid="true"] {
 
 .acciones-torneo {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 0.5rem;
   margin-top: 0.75rem;
 }
 
-.btn-editar {
+.acciones-torneo .btn {
   width: auto;
   margin: 0;
   padding: 0.5rem 0.75rem;
   font-size: 0.9rem;
+}
+
+.btn-aplazar {
+  background: #b45309;
+}
+
+.btn-cancelar-evento {
+  background: #4b5563;
+}
+
+.btn-ver-inscritos {
+  border: 1px solid var(--color-principal);
+  background: transparent;
+  color: var(--color-principal);
+}
+
+.btn-ver-inscritos:hover,
+.btn-ver-inscritos:focus-visible {
+  background: #fdecee;
+}
+
+.modal-acciones-inscritos {
+  margin-top: 1rem;
 }
 
 .nav-saludo {
@@ -537,6 +792,11 @@ select[aria-invalid="true"] {
 
   .auth-card {
     padding: 1.75rem 1.5rem;
+  }
+
+  .perfil-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
   }
 }
 

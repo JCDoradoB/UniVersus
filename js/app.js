@@ -1,4 +1,11 @@
 import { supabaseClient } from "./supabase.js";
+import {
+  claseEstadoInscripcion,
+  etiquetaCuposDisponibles,
+  etiquetaEstadoInscripcion,
+  obtenerEstadoInscripcion,
+} from "./torneos-utils.js";
+import { puedeGestionarEventos } from "./roles.js";
 
 const listaTorneos = document.getElementById("lista-torneos");
 const mensajeVacio = document.getElementById("mensaje-vacio");
@@ -17,6 +24,7 @@ const mensajeInscripcionOk = document.getElementById("mensaje-inscripcion-ok");
 let torneoSeleccionado = null;
 const torneosInscritos = new Set();
 const botonesInscripcion = new Map();
+const conteosInscripciones = new Map();
 
 const marcarComoInscrito = (torneoId) => {
   torneosInscritos.add(torneoId);
@@ -26,15 +34,6 @@ const marcarComoInscrito = (torneoId) => {
   boton.textContent = "Ya inscrito";
   boton.disabled = true;
   boton.classList.add("btn-inscrito");
-};
-
-const claseChip = (estado) => {
-  const valor = (estado || "").toLowerCase().trim();
-
-  if (valor === "abierto") return "chip chip-abierto";
-  if (valor === "en curso") return "chip chip-en-curso";
-  if (valor === "finalizado") return "chip chip-finalizado";
-  return "chip";
 };
 
 const formatearFecha = (fecha) => {
@@ -52,6 +51,28 @@ const formatearFecha = (fecha) => {
 
 const formatearRangoFechas = (inicio, fin) =>
   `${formatearFecha(inicio)} – ${formatearFecha(fin)}`;
+
+const crearImagenDeporte = (torneo) => {
+  const contenedor = document.createElement("div");
+  contenedor.className = "imagen-torneo";
+
+  const respaldo = document.createElement("div");
+  respaldo.className = "imagen-torneo-respaldo";
+  respaldo.textContent = torneo.deporte || "Deporte";
+  respaldo.setAttribute("aria-hidden", "true");
+  contenedor.append(respaldo);
+
+  const imagenUrl = torneo.imagenUrl || torneo.imagen_url;
+  if (imagenUrl) {
+    const imagen = document.createElement("img");
+    imagen.src = imagenUrl;
+    imagen.alt = `Imagen de ${torneo.deporte || "deporte"}`;
+    imagen.loading = "lazy";
+    imagen.addEventListener("error", () => imagen.remove());
+    contenedor.append(imagen);
+  }
+  return contenedor;
+};
 
 const mostrarErrorInscripcion = (texto) => {
   mensajeInscripcion.textContent = texto;
@@ -93,13 +114,18 @@ const crearTarjeta = (torneo) => {
   const titulo = document.createElement("h2");
   titulo.textContent = torneo.nombre || "Torneo sin nombre";
 
+  const imagenDeporte = crearImagenDeporte(torneo);
   const meta = document.createElement("dl");
   meta.className = "tarjeta-meta";
 
+  const inscritos = conteosInscripciones.get(torneo.id);
   const campos = [
     ["Deporte", torneo.deporte || "No especificado"],
     ["Modalidad", torneo.modalidad === "equipos" ? "Por equipos" : "Individual"],
-    ["Cupos", torneo.cupos ?? "Sin límite"],
+    [
+      "Cupos disponibles",
+      etiquetaCuposDisponibles(torneo.cupos, inscritos),
+    ],
   ];
 
   campos.forEach(([etiqueta, valor]) => {
@@ -111,8 +137,9 @@ const crearTarjeta = (torneo) => {
   });
 
   const chip = document.createElement("span");
-  chip.className = claseChip(torneo.estado);
-  chip.textContent = torneo.estado || "Sin estado";
+  const estado = obtenerEstadoInscripcion(torneo);
+  chip.className = claseEstadoInscripcion(estado);
+  chip.textContent = etiquetaEstadoInscripcion(estado);
 
   const fechas = document.createElement("div");
   fechas.className = "torneo-fechas";
@@ -135,22 +162,33 @@ const crearTarjeta = (torneo) => {
   botonInscribirme.className = "btn btn-inscribirme";
   botonInscribirme.type = "button";
   botonesInscripcion.set(torneo.id, botonInscribirme);
+  const cuposAgotados = torneo.cupos != null && inscritos >= torneo.cupos;
   if (torneosInscritos.has(torneo.id)) {
     botonInscribirme.textContent = "Ya inscrito";
     botonInscribirme.disabled = true;
     botonInscribirme.classList.add("btn-inscrito");
+  } else if (estado === "cancelado") {
+    botonInscribirme.textContent = "Evento cancelado";
+    botonInscribirme.disabled = true;
+  } else if (estado !== "abierto" || cuposAgotados) {
+    botonInscribirme.textContent = cuposAgotados
+      ? "Cupos completos"
+      : estado === "proximamente"
+        ? "Inscripciones próximamente"
+        : "Inscripciones cerradas";
+    botonInscribirme.disabled = true;
   } else {
     botonInscribirme.textContent = "Inscribirme";
   }
   botonInscribirme.addEventListener("click", () => {
-    if (torneosInscritos.has(torneo.id)) return;
+    if (torneosInscritos.has(torneo.id) || estado !== "abierto" || cuposAgotados) return;
     abrirFormularioInscripcion(torneo).catch((error) => {
       mostrarErrorInscripcion(`No se pudo abrir la inscripción. ${error.message}`);
       if (!dialogoInscripcion.open) dialogoInscripcion.showModal();
     });
   });
 
-  articulo.append(titulo, meta, fechas, chip, botonInscribirme);
+  articulo.append(imagenDeporte, titulo, meta, fechas, chip, botonInscribirme);
   return articulo;
 };
 
@@ -165,6 +203,7 @@ const cargarTorneos = async () => {
 
   torneosInscritos.clear();
   botonesInscripcion.clear();
+  conteosInscripciones.clear();
   if (mensajeVacio) {
     mensajeVacio.hidden = false;
     mensajeVacio.textContent = "Cargando torneos...";
@@ -184,10 +223,24 @@ const cargarTorneos = async () => {
     return;
   }
 
-  let errorVerificacion = null;
+  const erroresCarga = [];
+  const { data: conteos, error: errorConteos } = await supabaseClient.rpc(
+    "contar_inscripciones_por_torneo"
+  );
+  if (errorConteos) {
+    erroresCarga.push(
+      `No se pudieron cargar los cupos ocupados. Ejecuta la migración contadores_y_gestion_inscripciones. ${errorConteos.message}`
+    );
+  } else {
+    data.forEach((torneo) => conteosInscripciones.set(torneo.id, 0));
+    (conteos || []).forEach((registro) =>
+      conteosInscripciones.set(registro.torneo_id, Number(registro.inscritos))
+    );
+  }
+
   const { data: sesion, error: errorSesion } = await supabaseClient.auth.getSession();
   if (errorSesion) {
-    errorVerificacion = `No pudimos comprobar tus inscripciones. ${errorSesion.message}`;
+    erroresCarga.push(`No pudimos comprobar tus inscripciones. ${errorSesion.message}`);
   } else if (sesion.session?.user) {
     const { data: inscripciones, error } = await supabaseClient
       .from("inscripciones")
@@ -195,15 +248,15 @@ const cargarTorneos = async () => {
       .eq("usuario_id", sesion.session.user.id);
 
     if (error) {
-      errorVerificacion = `No pudimos comprobar tus inscripciones. ${error.message}`;
+      erroresCarga.push(`No pudimos comprobar tus inscripciones. ${error.message}`);
     } else {
       inscripciones.forEach((inscripcion) => torneosInscritos.add(inscripcion.torneo_id));
     }
   }
 
   listaTorneos.replaceChildren(...data.map(crearTarjeta));
-  if (errorVerificacion) {
-    mostrarError(errorVerificacion);
+  if (erroresCarga.length) {
+    mostrarError(erroresCarga.join(" "));
   } else if (mensajeVacio) {
     mensajeVacio.hidden = true;
   }
@@ -222,15 +275,18 @@ const actualizarNavegacion = async () => {
     .eq("id", usuario.id)
     .maybeSingle();
 
-  const enlaceEventos = document.createElement("a");
-  enlaceEventos.href = "eventos.html";
-  enlaceEventos.textContent = ["organizador", "administrador"].includes(perfil?.rol)
-    ? "Crear evento"
-    : "Eventos";
+  const enlacePerfil = document.createElement("a");
+  enlacePerfil.href = "perfil.html";
+  enlacePerfil.textContent = "Mi perfil";
 
-  const nombre = document.createElement("span");
-  nombre.className = "nav-saludo";
-  nombre.textContent = perfil?.nombre || usuario.email;
+  const enlacesCuenta = [];
+  if (puedeGestionarEventos(perfil?.rol)) {
+    const enlaceCrearEvento = document.createElement("a");
+    enlaceCrearEvento.href = "eventos.html";
+    enlaceCrearEvento.textContent = "Crear evento";
+    enlacesCuenta.push(enlaceCrearEvento);
+  }
+  enlacesCuenta.push(enlacePerfil);
 
   const cerrarSesion = document.createElement("button");
   cerrarSesion.className = "btn-enlace";
@@ -245,7 +301,7 @@ const actualizarNavegacion = async () => {
     window.location.reload();
   });
 
-  navCuenta.replaceChildren(enlaceEventos, nombre, cerrarSesion);
+  navCuenta.replaceChildren(...enlacesCuenta, cerrarSesion);
 };
 
 const cerrarDialogoInscripcion = () => {
@@ -304,6 +360,7 @@ formularioInscripcion.addEventListener("submit", async (evento) => {
 
     marcarComoInscrito(torneoSeleccionado.id);
     cerrarDialogoInscripcion();
+    await cargarTorneos();
     mensajeInscripcionOk.textContent = "Tu inscripción fue enviada correctamente.";
     mensajeInscripcionOk.hidden = false;
     mensajeInscripcionOk.classList.add("visible");

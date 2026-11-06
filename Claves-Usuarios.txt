@@ -5,3 +5,7 @@ Contraseña: Password123*
 Usuario Administrador (Admin)
 Correo: admin@universus.com
 Contraseña: Password123*
+
+Usuario de Prueba
+Correo: nataliaj@universus.com
+Contraseña:natalia123

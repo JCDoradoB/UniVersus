@@ -1,4 +1,10 @@
 import { supabaseClient } from "./supabase.js";
+import { normalizarRol, puedeGestionarEventos as rolPuedeGestionarEventos } from "./roles.js";
+import {
+  claseEstadoInscripcion,
+  etiquetaEstadoInscripcion,
+  obtenerEstadoInscripcion,
+} from "./torneos-utils.js";
 
 const seccionCrear = document.getElementById("seccion-crear");
 const formulario = document.getElementById("form-evento");
@@ -8,16 +14,25 @@ const mensajeError = document.getElementById("mensaje-error");
 const mensajeOk = document.getElementById("mensaje-ok");
 const listaTorneos = document.getElementById("lista-torneos");
 const saludo = document.getElementById("saludo");
-const seccionInscripciones = document.getElementById("seccion-inscripciones");
-const mensajeInscripciones = document.getElementById("mensaje-inscripciones");
-const filasInscripciones = document.getElementById("filas-inscripciones");
-const tablaInscripciones = document.querySelector(".tabla-inscripciones-contenedor");
+const contadorUsuarios = document.getElementById("contador-usuarios");
+const textoContadorUsuarios = document.getElementById("texto-contador-usuarios");
+const dialogoUsuarios = document.getElementById("dialogo-usuarios");
+const mensajeUsuarios = document.getElementById("mensaje-usuarios");
+const tablaUsuarios = document.getElementById("tabla-usuarios-contenedor");
+const filasUsuarios = document.getElementById("filas-usuarios");
+const dialogoInscritos = document.getElementById("dialogo-inscritos");
+const tituloInscritos = document.getElementById("titulo-inscritos");
+const mensajeInscritos = document.getElementById("mensaje-inscritos");
+const filasInscritos = document.getElementById("filas-inscritos");
+const tablaInscritos = document.querySelector("#dialogo-inscritos .tabla-inscripciones-contenedor");
 const tituloFormulario = document.getElementById("titulo-formulario");
 const botonGuardar = document.getElementById("guardar-evento");
 const botonAbrirFormulario = document.getElementById("abrir-formulario");
 let puedeGestionarEventos = false;
 let fechasDisponibles = true;
 let eventoEnEdicion = null;
+let modoSoloFechas = false;
+const conteosInscripciones = new Map();
 
 const mostrarMensaje = (elemento, texto) => {
   elemento.textContent = texto;
@@ -32,6 +47,8 @@ const limpiarMensaje = (elemento) => {
 };
 
 document.getElementById("abrir-formulario").addEventListener("click", () => {
+  modoSoloFechas = false;
+  configurarCamposSoloFechas(false);
   eventoEnEdicion = null;
   formulario.reset();
   tituloFormulario.textContent = "Crear un evento";
@@ -42,6 +59,8 @@ document.getElementById("abrir-formulario").addEventListener("click", () => {
 
 const cerrarFormulario = () => {
   dialogoEvento.close();
+  modoSoloFechas = false;
+  configurarCamposSoloFechas(false);
   limpiarMensaje(mensajeError);
   formulario.reset();
   eventoEnEdicion = null;
@@ -51,9 +70,19 @@ const cerrarFormulario = () => {
 
 document.getElementById("cerrar-formulario").addEventListener("click", cerrarFormulario);
 document.getElementById("cancelar-formulario").addEventListener("click", cerrarFormulario);
+document.getElementById("cerrar-inscritos").addEventListener("click", () => dialogoInscritos.close());
+document.getElementById("cerrar-modal-inscritos").addEventListener("click", () => dialogoInscritos.close());
+document.getElementById("cerrar-usuarios").addEventListener("click", () => dialogoUsuarios.close());
+document.getElementById("cerrar-modal-usuarios").addEventListener("click", () => dialogoUsuarios.close());
 
 dialogoEvento.addEventListener("click", (evento) => {
   if (evento.target === dialogoEvento) cerrarFormulario();
+});
+dialogoInscritos.addEventListener("click", (evento) => {
+  if (evento.target === dialogoInscritos) dialogoInscritos.close();
+});
+dialogoUsuarios.addEventListener("click", (evento) => {
+  if (evento.target === dialogoUsuarios) dialogoUsuarios.close();
 });
 
 const formatearFecha = (fecha) => {
@@ -65,6 +94,143 @@ const formatearFecha = (fecha) => {
     month: "long",
     year: "numeric",
   });
+};
+
+const configurarCamposSoloFechas = (soloFechas) => {
+  const camposDeFecha = new Set([
+    "inscripciones_inicio",
+    "inscripciones_fin",
+    "fecha_inicio",
+    "fecha_fin",
+  ]);
+  [...formulario.elements].forEach((campo) => {
+    if (campo instanceof HTMLInputElement || campo instanceof HTMLSelectElement) {
+      campo.disabled = soloFechas && !camposDeFecha.has(campo.name);
+    }
+  });
+};
+
+const editarEvento = (torneo, soloFechas = false) => {
+  eventoEnEdicion = torneo;
+  modoSoloFechas = soloFechas;
+  configurarCamposSoloFechas(soloFechas);
+  tituloFormulario.textContent = soloFechas ? "Aplazar evento" : "Editar evento";
+  botonGuardar.textContent = soloFechas ? "Guardar nuevas fechas" : "Guardar cambios";
+  formulario.elements.nombre.value = torneo.nombre || "";
+  formulario.elements.deporte.value = torneo.deporte || "";
+  formulario.elements.modalidad.value = torneo.modalidad || "individual";
+  formulario.elements.inscripciones_inicio.value = torneo.inscripciones_inicio || "";
+  formulario.elements.inscripciones_fin.value = torneo.inscripciones_fin || "";
+  formulario.elements.fecha_inicio.value = torneo.fecha_inicio || "";
+  formulario.elements.fecha_fin.value = torneo.fecha_fin || "";
+  formulario.elements.cupos.value = torneo.cupos ?? "";
+  formulario.elements.imagen_url.value = torneo.imagen_url || torneo.imagenUrl || "";
+  limpiarMensaje(mensajeError);
+  dialogoEvento.showModal();
+  formulario.elements[soloFechas ? "inscripciones_inicio" : "nombre"].focus();
+};
+
+const crearCelda = (fila, valor) => {
+  const celda = document.createElement("td");
+  celda.textContent = valor || "—";
+  fila.append(celda);
+};
+
+const formatearFechaRegistro = (fecha) => {
+  if (!fecha) return "Sin fecha";
+  const fechaLocal = new Date(fecha);
+  if (Number.isNaN(fechaLocal.getTime())) return fecha;
+  return fechaLocal.toLocaleString("es-CO", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+};
+
+const cargarUsuarios = async () => {
+  mensajeUsuarios.textContent = "Cargando usuarios...";
+  mensajeUsuarios.hidden = false;
+  tablaUsuarios.hidden = true;
+  filasUsuarios.replaceChildren();
+  dialogoUsuarios.showModal();
+
+  const { data: usuarios, error } = await supabaseClient.rpc("listar_usuarios_registrados");
+  if (error) {
+    mostrarMensaje(
+      mensajeUsuarios,
+      `No se pudo cargar la lista. Ejecuta la migración de listado de usuarios en Supabase. ${error.message}`
+    );
+    return;
+  }
+
+  if (!usuarios?.length) {
+    mensajeUsuarios.textContent = "Todavía no hay usuarios registrados.";
+    return;
+  }
+
+  const filas = usuarios.map((usuario) => {
+    const fila = document.createElement("tr");
+    [
+      usuario.nombre,
+      usuario.correo,
+      usuario.programa,
+      formatearFechaRegistro(usuario.fecha_registro),
+    ].forEach((valor) => crearCelda(fila, valor));
+    return fila;
+  });
+  filasUsuarios.replaceChildren(...filas);
+  mensajeUsuarios.hidden = true;
+  tablaUsuarios.hidden = false;
+};
+
+contadorUsuarios.addEventListener("click", () => {
+  cargarUsuarios().catch((error) => {
+    mostrarMensaje(mensajeUsuarios, `No se pudo cargar la lista. ${error.message}`);
+    if (!dialogoUsuarios.open) dialogoUsuarios.showModal();
+  });
+});
+
+const mostrarInscritos = async (torneo) => {
+  tituloInscritos.textContent = `Inscritos: ${torneo.nombre || "Evento"}`;
+  mensajeInscritos.textContent = "Cargando inscritos...";
+  mensajeInscritos.hidden = false;
+  tablaInscritos.hidden = true;
+  filasInscritos.replaceChildren();
+  dialogoInscritos.showModal();
+
+  const { data: inscripciones, error } = await supabaseClient
+    .from("inscripciones")
+    .select("nombre_equipo, nombre_capitan, codigo_estudiante, correo_institucional, created_at")
+    .eq("torneo_id", torneo.id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    mostrarMensaje(
+      mensajeInscritos,
+      `No se pudieron cargar los inscritos. Ejecuta la migración contadores_y_gestion_inscripciones en Supabase. ${error.message}`
+    );
+    return;
+  }
+
+  if (!inscripciones?.length) {
+    mensajeInscritos.textContent = "Todavía no hay personas inscritas en este evento.";
+    tablaInscritos.hidden = true;
+    return;
+  }
+
+  const filas = inscripciones.map((inscripcion) => {
+    const fila = document.createElement("tr");
+    [
+      inscripcion.nombre_equipo || "Individual",
+      inscripcion.nombre_capitan,
+      inscripcion.codigo_estudiante,
+      inscripcion.correo_institucional,
+      formatearFechaInscripcion(inscripcion.created_at),
+    ].forEach((valor) => crearCelda(fila, valor));
+    return fila;
+  });
+  filasInscritos.replaceChildren(...filas);
+  mensajeInscritos.hidden = true;
+  tablaInscritos.hidden = false;
 };
 
 const crearTarjeta = (torneo) => {
@@ -90,13 +256,15 @@ const crearTarjeta = (torneo) => {
 
   const meta = document.createElement("p");
   meta.className = "tarjeta-detalle";
-  meta.textContent = `${torneo.cupos ?? "Sin límite"} ${
+  const inscritos = conteosInscripciones.get(torneo.id);
+  meta.textContent = `${inscritos ?? "—"} / ${torneo.cupos ?? "Sin límite"} ${
     torneo.modalidad === "equipos" ? "equipos" : "cupos"
   }`;
 
   const estado = document.createElement("span");
-  estado.className = "chip chip-abierto";
-  estado.textContent = torneo.estado || "abierto";
+  const estadoCalculado = obtenerEstadoInscripcion(torneo);
+  estado.className = claseEstadoInscripcion(estadoCalculado);
+  estado.textContent = etiquetaEstadoInscripcion(estadoCalculado);
 
   articulo.append(titulo, detalles, inscripciones, fechaEvento, meta, estado);
 
@@ -113,24 +281,54 @@ const crearTarjeta = (torneo) => {
     botonEditar.title = fechasDisponibles
       ? ""
       : "Aplica la migración de fechas para poder editar eventos.";
-    botonEditar.addEventListener("click", () => {
-      eventoEnEdicion = torneo;
-      tituloFormulario.textContent = "Editar evento";
-      botonGuardar.textContent = "Guardar cambios";
-      formulario.elements.nombre.value = torneo.nombre || "";
-      formulario.elements.deporte.value = torneo.deporte || "";
-      formulario.elements.modalidad.value = torneo.modalidad || "individual";
-      formulario.elements.inscripciones_inicio.value = torneo.inscripciones_inicio || "";
-      formulario.elements.inscripciones_fin.value = torneo.inscripciones_fin || "";
-      formulario.elements.fecha_inicio.value = torneo.fecha_inicio || "";
-      formulario.elements.fecha_fin.value = torneo.fecha_fin || "";
-      formulario.elements.cupos.value = torneo.cupos ?? "";
-      limpiarMensaje(mensajeError);
-      dialogoEvento.showModal();
-      document.getElementById("nombre").focus();
+    botonEditar.addEventListener("click", () => editarEvento(torneo));
+    const botonAplazar = document.createElement("button");
+    botonAplazar.className = "btn btn-aplazar";
+    botonAplazar.type = "button";
+    botonAplazar.textContent = "Aplazar";
+    botonAplazar.setAttribute("aria-label", `Cambiar fechas de ${torneo.nombre || "evento"}`);
+    botonAplazar.disabled = !fechasDisponibles;
+    botonAplazar.addEventListener("click", () => editarEvento(torneo, true));
+
+    const botonCancelar = document.createElement("button");
+    botonCancelar.className = "btn btn-cancelar-evento";
+    botonCancelar.type = "button";
+    botonCancelar.textContent = "Cancelar evento";
+    botonCancelar.disabled = estadoCalculado === "cancelado";
+    botonCancelar.addEventListener("click", async () => {
+      if (!window.confirm(`¿Seguro que deseas cancelar "${torneo.nombre}"?`)) return;
+      botonCancelar.disabled = true;
+      const { data, error } = await supabaseClient
+        .from("torneos")
+        .update({ estado: "cancelado" })
+        .eq("id", torneo.id)
+        .select("id");
+      botonCancelar.disabled = false;
+
+      if (error) {
+        mostrarMensaje(mensajeEventos, `No se pudo cancelar el evento. ${error.message}`);
+        return;
+      }
+      if (!data?.length) {
+        mostrarMensaje(mensajeEventos, "No se canceló el evento. Verifica los permisos de edición.");
+        return;
+      }
+      mostrarMensaje(mensajeOk, "Evento cancelado.");
+      await cargarEventos();
     });
 
-    acciones.append(botonEditar);
+    const botonVerInscritos = document.createElement("button");
+    botonVerInscritos.className = "btn btn-ver-inscritos";
+    botonVerInscritos.type = "button";
+    botonVerInscritos.textContent = `Ver inscritos (${inscritos ?? "—"})`;
+    botonVerInscritos.addEventListener("click", () => {
+      mostrarInscritos(torneo).catch((error) => {
+        mostrarMensaje(mensajeInscritos, `No se pudieron cargar los inscritos. ${error.message}`);
+        if (!dialogoInscritos.open) dialogoInscritos.showModal();
+      });
+    });
+
+    acciones.append(botonVerInscritos, botonEditar, botonAplazar, botonCancelar);
     articulo.append(acciones);
   }
 
@@ -141,7 +339,7 @@ const cargarEventos = async () => {
   let { data, error } = await supabaseClient
     .from("torneos")
     .select(
-      "id, nombre, deporte, modalidad, inscripciones_inicio, inscripciones_fin, fecha_inicio, fecha_fin, cupos, estado"
+      "id, nombre, deporte, modalidad, inscripciones_inicio, inscripciones_fin, fecha_inicio, fecha_fin, cupos, estado, imagen_url"
     )
     .order("fecha_inicio", { ascending: true });
 
@@ -150,7 +348,7 @@ const cargarEventos = async () => {
     error &&
     (error.code === "42703" ||
       error.code === "PGRST204" ||
-      /inscripciones_inicio|inscripciones_fin|fecha_fin/i.test(error.message))
+      /inscripciones_inicio|inscripciones_fin|fecha_fin|imagen_url/i.test(error.message))
   ) {
     const resultadoAnterior = await supabaseClient
       .from("torneos")
@@ -167,6 +365,17 @@ const cargarEventos = async () => {
       `No se pudieron cargar los eventos. Comprueba que ejecutaste la migración de base de datos. ${error.message}`
     );
     return;
+  }
+
+  conteosInscripciones.clear();
+  const { data: conteos, error: errorConteos } = await supabaseClient.rpc(
+    "contar_inscripciones_por_torneo"
+  );
+  if (!errorConteos) {
+    data.forEach((torneo) => conteosInscripciones.set(torneo.id, 0));
+    (conteos || []).forEach((registro) =>
+      conteosInscripciones.set(registro.torneo_id, Number(registro.inscritos))
+    );
   }
 
   botonAbrirFormulario.disabled = !fechasDisponibles;
@@ -193,6 +402,12 @@ const cargarEventos = async () => {
       "Los eventos se muestran con el esquema anterior. Este problema afecta por igual a administradores y organizadores. Ejecuta supabase/migrations/20261104200000_inscripciones_torneos.sql en el proyecto Supabase para habilitar fechas completas, edición y nuevas inscripciones."
     );
   }
+  if (errorConteos) {
+    mostrarMensaje(
+      mensajeEventos,
+      `No se pudieron cargar los conteos de inscritos. Ejecuta la migración contadores_y_gestion_inscripciones en Supabase. ${errorConteos.message}`
+    );
+  }
   listaTorneos.replaceChildren(...data.map(crearTarjeta));
 };
 
@@ -204,71 +419,6 @@ const formatearFechaInscripcion = (fecha) => {
     dateStyle: "medium",
     timeStyle: "short",
   });
-};
-
-const cargarInscripciones = async () => {
-  mensajeInscripciones.textContent = "Cargando inscripciones...";
-  tablaInscripciones.hidden = true;
-
-  const { data: inscripciones, error } = await supabaseClient
-    .from("inscripciones")
-    .select(
-      "id, torneo_id, nombre_equipo, nombre_capitan, codigo_estudiante, correo_institucional, created_at"
-    )
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    mostrarMensaje(
-      mensajeInscripciones,
-      `No se pudieron cargar las inscripciones. Comprueba que ejecutaste la migración de inscripciones y la política de lectura para organizadores. ${error.message}`
-    );
-    return;
-  }
-
-  if (!inscripciones?.length) {
-    mostrarMensaje(mensajeInscripciones, "Todavía no hay personas inscritas.");
-    filasInscripciones.replaceChildren();
-    return;
-  }
-
-  const torneoIds = [...new Set(inscripciones.map((inscripcion) => inscripcion.torneo_id))];
-  const { data: torneos, error: errorTorneos } = await supabaseClient
-    .from("torneos")
-    .select("id, nombre")
-    .in("id", torneoIds);
-
-  if (errorTorneos) {
-    mostrarMensaje(
-      mensajeInscripciones,
-      `No se pudieron asociar las inscripciones con sus eventos. ${errorTorneos.message}`
-    );
-    return;
-  }
-
-  const nombresTorneos = new Map(torneos.map((torneo) => [torneo.id, torneo.nombre]));
-  const filas = inscripciones.map((inscripcion) => {
-    const fila = document.createElement("tr");
-    const valores = [
-      nombresTorneos.get(inscripcion.torneo_id) || "Evento eliminado",
-      inscripcion.nombre_equipo || "Individual",
-      inscripcion.nombre_capitan,
-      inscripcion.codigo_estudiante,
-      inscripcion.correo_institucional,
-      formatearFechaInscripcion(inscripcion.created_at),
-    ];
-
-    valores.forEach((valor) => {
-      const celda = document.createElement("td");
-      celda.textContent = valor || "—";
-      fila.append(celda);
-    });
-
-    return fila;
-  });
-
-  filasInscripciones.replaceChildren(...filas);
-  tablaInscripciones.hidden = false;
-  limpiarMensaje(mensajeInscripciones);
 };
 
 const iniciar = async () => {
@@ -299,16 +449,30 @@ const iniciar = async () => {
   }
 
   saludo.textContent = `Hola, ${perfil.nombre || usuario.email}.`;
-  puedeGestionarEventos = ["organizador", "administrador"].includes(perfil.rol);
-  if (puedeGestionarEventos) {
-    seccionCrear.hidden = false;
-    seccionInscripciones.hidden = false;
-  } else {
-    mostrarMensaje(mensajeEventos, "Tu cuenta no tiene permisos de organizador para crear eventos.");
+  const rol = normalizarRol(perfil.rol);
+  puedeGestionarEventos = rolPuedeGestionarEventos(rol);
+  if (!puedeGestionarEventos) {
+    window.location.replace("index.html");
+    return;
+  }
+
+  seccionCrear.hidden = false;
+
+  if (rol === "administrador") {
+    contadorUsuarios.hidden = false;
+    textoContadorUsuarios.textContent = "Cargando usuarios registrados...";
+    const { data: totalUsuarios, error: errorUsuarios } = await supabaseClient.rpc(
+      "total_usuarios_registrados"
+    );
+    if (errorUsuarios) {
+      textoContadorUsuarios.textContent = `No se pudo cargar el total de usuarios. ${errorUsuarios.message}`;
+      contadorUsuarios.disabled = true;
+    } else {
+      textoContadorUsuarios.textContent = `Usuarios registrados: ${totalUsuarios}`;
+    }
   }
 
   await cargarEventos();
-  if (puedeGestionarEventos) await cargarInscripciones();
 };
 
 formulario.addEventListener("submit", async (evento) => {
@@ -328,7 +492,7 @@ formulario.addEventListener("submit", async (evento) => {
 
   const datos = new FormData(formulario);
   const cupos = Number(datos.get("cupos"));
-  if (!Number.isInteger(cupos) || cupos < 1) {
+  if (!modoSoloFechas && (!Number.isInteger(cupos) || cupos < 1)) {
     mostrarMensaje(mensajeError, "Los cupos deben ser un número entero mayor que cero.");
     return;
   }
@@ -359,16 +523,24 @@ formulario.addEventListener("submit", async (evento) => {
       return;
     }
 
-    const datosEvento = {
-      nombre: String(datos.get("nombre")).trim(),
-      deporte: String(datos.get("deporte")).trim(),
-      modalidad: String(datos.get("modalidad")),
-      inscripciones_inicio: inicioInscripciones,
-      inscripciones_fin: finInscripciones,
-      fecha_inicio: inicioEvento,
-      fecha_fin: finEvento,
-      cupos,
-    };
+    const datosEvento = modoSoloFechas
+      ? {
+          inscripciones_inicio: inicioInscripciones,
+          inscripciones_fin: finInscripciones,
+          fecha_inicio: inicioEvento,
+          fecha_fin: finEvento,
+        }
+      : {
+          nombre: String(datos.get("nombre")).trim(),
+          deporte: String(datos.get("deporte")).trim(),
+          modalidad: String(datos.get("modalidad")),
+          imagen_url: String(datos.get("imagen_url") || "").trim() || null,
+          inscripciones_inicio: inicioInscripciones,
+          inscripciones_fin: finInscripciones,
+          fecha_inicio: inicioEvento,
+          fecha_fin: finEvento,
+          cupos,
+        };
 
     const resultado = eventoEnEdicion
       ? await supabaseClient
@@ -403,14 +575,21 @@ formulario.addEventListener("submit", async (evento) => {
     }
 
     const estabaEditando = Boolean(eventoEnEdicion);
+    const estabaAplazando = modoSoloFechas;
     formulario.reset();
     dialogoEvento.close();
     eventoEnEdicion = null;
+    modoSoloFechas = false;
+    configurarCamposSoloFechas(false);
     tituloFormulario.textContent = "Crear un evento";
     botonGuardar.textContent = "Publicar evento";
     mostrarMensaje(
       mensajeOk,
-      estabaEditando ? "Cambios guardados correctamente." : "Evento publicado correctamente."
+      estabaAplazando
+        ? "Nuevas fechas guardadas correctamente."
+        : estabaEditando
+          ? "Cambios guardados correctamente."
+          : "Evento publicado correctamente."
     );
     await cargarEventos();
   } catch (error) {

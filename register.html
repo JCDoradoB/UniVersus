@@ -74,11 +74,35 @@
           </div>
           <div class="form-grupo">
             <label for="email">Correo electrónico</label>
-            <input id="email" name="email" type="email" autocomplete="email" required />
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              placeholder="ejemplo@correounivalle.edu.co"
+              required
+            />
           </div>
           <div class="form-grupo">
             <label for="password">Contraseña</label>
             <input id="password" name="password" type="password" autocomplete="new-password" required />
+            <div class="medidor-password">
+              <div
+                id="nivel-password"
+                class="medidor-password-barra"
+                role="meter"
+                aria-label="Seguridad de la contraseña"
+                aria-valuemin="0"
+                aria-valuemax="3"
+                aria-valuenow="0"
+                aria-valuetext="Sin contraseña"
+              >
+                <span id="nivel-password-progreso"></span>
+              </div>
+              <p id="nivel-password-texto" class="medidor-password-texto" aria-live="polite">
+                Escribe una contraseña para ver su nivel.
+              </p>
+            </div>
           </div>
           <button class="btn" type="submit">Registrarme</button>
         </form>

@@ -1,4 +1,5 @@
 import { supabaseClient } from "./supabase.js";
+import { puedeGestionarEventos } from "./roles.js";
 
 const MENSAJE_CORREO_INVALIDO = "El correo electrónico no es válido.";
 const MENSAJE_PASSWORD_CORTA = "La contraseña debe tener al menos 8 caracteres.";
@@ -35,6 +36,47 @@ const validarCredenciales = (correo, password) => {
 
 const formularioLogin = document.getElementById("form-login");
 const formularioRegistro = document.getElementById("form-registro");
+
+if (formularioRegistro) {
+  const campoPassword = formularioRegistro.elements.password;
+  const barraPassword = document.getElementById("nivel-password");
+  const textoPassword = document.getElementById("nivel-password-texto");
+
+  campoPassword.addEventListener("input", () => {
+    const password = campoPassword.value;
+    const tieneMayuscula = /[A-Z]/.test(password);
+    const tieneMinuscula = /[a-z]/.test(password);
+    const tieneNumero = /\d/.test(password);
+    const tieneSimbolo = /[^A-Za-z0-9]/.test(password);
+    let nivel = 0;
+    let etiqueta = "Escribe una contraseña para ver su nivel.";
+    let clase = "";
+
+    if (password.length > 0 && password.length < 8) {
+      nivel = 1;
+      etiqueta = "Contraseña débil";
+      clase = "nivel-debil";
+    } else if (password.length >= 8 && tieneMayuscula && tieneMinuscula && tieneNumero && tieneSimbolo) {
+      nivel = 3;
+      etiqueta = "Contraseña fuerte";
+      clase = "nivel-fuerte";
+    } else if (password.length >= 8 && /[A-Za-z]/.test(password) && tieneNumero) {
+      nivel = 2;
+      etiqueta = "Contraseña media";
+      clase = "nivel-medio";
+    } else if (password.length >= 8) {
+      nivel = 1;
+      etiqueta = "Contraseña débil";
+      clase = "nivel-debil";
+    }
+
+    barraPassword.className = `medidor-password-barra ${clase}`.trim();
+    barraPassword.setAttribute("aria-valuenow", String(nivel));
+    barraPassword.setAttribute("aria-valuetext", etiqueta);
+    textoPassword.className = `medidor-password-texto ${clase}`.trim();
+    textoPassword.textContent = etiqueta;
+  });
+}
 
 if (formularioLogin) {
   const mensajeError = document.getElementById("mensaje-error");
@@ -90,7 +132,7 @@ if (formularioLogin) {
         return;
       }
 
-      window.location.href = ["organizador", "administrador"].includes(perfil.rol)
+      window.location.href = puedeGestionarEventos(perfil.rol)
         ? "eventos.html"
         : "index.html";
     } catch (error) {

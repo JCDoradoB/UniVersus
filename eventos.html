@@ -11,8 +11,8 @@
       <div class="header-inner">
         <p class="logo"><a href="index.html">UniVersus</a></p>
         <nav class="nav-links" aria-label="Cuenta">
-          <a href="index.html">Torneos</a>
-          <a href="eventos.html">Crear evento</a>
+          <a href="eventos.html" aria-current="page">Crear evento</a>
+          <a href="perfil.html">Mi perfil</a>
           <button id="cerrar-sesion" class="btn-enlace" type="button">Cerrar sesión</button>
         </nav>
       </div>
@@ -22,6 +22,26 @@
       <section class="hero">
         <h1>Gestión de eventos deportivos</h1>
         <p id="saludo">Verificando tu cuenta...</p>
+        <button
+          id="contador-usuarios"
+          class="contador-usuarios"
+          type="button"
+          aria-haspopup="dialog"
+          aria-controls="dialogo-usuarios"
+          hidden
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+            <path
+              d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m16-11a4 4 0 0 1 0 8m-3-14a4 4 0 1 1 0 8M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            />
+          </svg>
+          <span id="texto-contador-usuarios">Cargando usuarios registrados...</span>
+        </button>
       </section>
 
       <section class="seccion-eventos" aria-labelledby="titulo-eventos">
@@ -79,6 +99,16 @@
                   <label for="cupos">Cupos (participantes o equipos)</label>
                   <input id="cupos" name="cupos" type="number" min="1" step="1" required />
                 </div>
+                <div class="form-grupo">
+                  <label for="imagen_url">URL de imagen del deporte (opcional)</label>
+                  <input
+                    id="imagen_url"
+                    name="imagen_url"
+                    type="url"
+                    maxlength="2048"
+                    placeholder="https://ejemplo.com/imagen.jpg"
+                  />
+                </div>
                 <div class="modal-acciones">
                   <button class="btn btn-secundario" type="button" id="cancelar-formulario">
                     Cancelar
@@ -87,6 +117,7 @@
                 </div>
               </form>
             </dialog>
+
           </section>
         </div>
         <p id="mensaje-ok" class="mensaje-ok" role="status" hidden></p>
@@ -94,17 +125,53 @@
         <div id="lista-torneos" class="torneos-grid"></div>
       </section>
 
-      <section id="seccion-inscripciones" class="seccion-inscripciones" aria-labelledby="titulo-inscripciones" hidden>
-        <div class="eventos-encabezado">
-          <h2 id="titulo-inscripciones">Personas inscritas</h2>
+      <dialog id="dialogo-usuarios" class="modal-evento" aria-labelledby="titulo-usuarios">
+        <div class="modal-encabezado">
+          <div>
+            <h2 id="titulo-usuarios">Usuarios registrados</h2>
+            <p class="subtitulo">Listado de cuentas creadas en UniVersus.</p>
+          </div>
+          <button id="cerrar-usuarios" class="btn-cerrar" type="button" aria-label="Cerrar">
+            &times;
+          </button>
         </div>
-        <p id="mensaje-inscripciones" class="mensaje" role="status">Cargando inscripciones...</p>
-        <div class="tabla-inscripciones-contenedor">
+        <p id="mensaje-usuarios" class="mensaje" role="status" hidden></p>
+        <div id="tabla-usuarios-contenedor" class="tabla-inscripciones-contenedor" hidden>
           <table class="tabla-inscripciones">
-            <caption class="visually-hidden">Inscripciones a los torneos</caption>
+            <caption class="visually-hidden">Usuarios registrados y sus datos académicos</caption>
             <thead>
               <tr>
-                <th scope="col">Evento</th>
+                <th scope="col">Nombre</th>
+                <th scope="col">Correo</th>
+                <th scope="col">Programa académico</th>
+                <th scope="col">Fecha de registro</th>
+              </tr>
+            </thead>
+            <tbody id="filas-usuarios"></tbody>
+          </table>
+        </div>
+        <div class="modal-acciones modal-acciones-inscritos">
+          <button id="cerrar-modal-usuarios" class="btn btn-secundario" type="button">
+            Cerrar
+          </button>
+        </div>
+      </dialog>
+
+      <dialog id="dialogo-inscritos" class="modal-evento" aria-labelledby="titulo-inscritos">
+        <div class="modal-encabezado">
+          <div>
+            <h2 id="titulo-inscritos">Personas inscritas</h2>
+          </div>
+          <button id="cerrar-inscritos" class="btn-cerrar" type="button" aria-label="Cerrar">
+            &times;
+          </button>
+        </div>
+        <p id="mensaje-inscritos" class="mensaje" role="status" hidden></p>
+        <div class="tabla-inscripciones-contenedor">
+          <table class="tabla-inscripciones">
+            <caption class="visually-hidden">Personas inscritas en este evento</caption>
+            <thead>
+              <tr>
                 <th scope="col">Equipo</th>
                 <th scope="col">Capitán</th>
                 <th scope="col">Código estudiante</th>
@@ -112,10 +179,15 @@
                 <th scope="col">Fecha de inscripción</th>
               </tr>
             </thead>
-            <tbody id="filas-inscripciones"></tbody>
+            <tbody id="filas-inscritos"></tbody>
           </table>
         </div>
-      </section>
+        <div class="modal-acciones modal-acciones-inscritos">
+          <button id="cerrar-modal-inscritos" class="btn btn-secundario" type="button">
+            Cerrar
+          </button>
+        </div>
+      </dialog>
     </main>
 
     <script type="module" src="js/eventos.js"></script>
